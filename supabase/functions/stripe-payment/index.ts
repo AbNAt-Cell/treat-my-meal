@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14.21.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { Resend } from "https://esm.sh/resend@2.0.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -133,6 +134,79 @@ serve(async (req) => {
 
         if (updateError) {
           console.error('Transaction update error:', updateError);
+        }
+
+        // Send email notifications
+        try {
+          const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+          
+          // Get transaction details for emails
+          const { data: txData } = await supabase
+            .from("transactions")
+            .select(`
+              *,
+              food_items:food_item_id (name),
+              profiles:recipient_id (full_name, email)
+            `)
+            .eq("payment_intent_id", reference)
+            .single();
+
+          if (txData) {
+            const getCurrencySymbol = (currency: string) => {
+              const symbols: { [key: string]: string } = {
+                USD: "$", EUR: "€", GBP: "£", NGN: "₦"
+              };
+              return symbols[currency] || "$";
+            };
+
+            const currencySymbol = getCurrencySymbol(txData.currency);
+            const recipientName = txData.profiles?.full_name || "there";
+            const itemName = txData.food_items?.name || "gift";
+
+            // Email to buyer
+            await resend.emails.send({
+              from: "LunchBuddy <onboarding@resend.dev>",
+              to: [txData.buyer_email],
+              subject: "Gift Purchase Confirmed! 🎁",
+              html: `
+                <h1>Thank you for your generous gift!</h1>
+                <p>Your gift purchase has been confirmed.</p>
+                <h2>Order Details:</h2>
+                <ul>
+                  <li><strong>Item:</strong> ${itemName}</li>
+                  <li><strong>Recipient:</strong> ${recipientName}</li>
+                  <li><strong>Amount:</strong> ${currencySymbol}${Number(txData.total_amount).toFixed(2)}</li>
+                </ul>
+                ${txData.buyer_note ? `<p><strong>Your message:</strong> "${txData.buyer_note}"</p>` : ""}
+                <p>The recipient will be notified about your thoughtful gift.</p>
+                <p>Best regards,<br>The LunchBuddy Team</p>
+              `,
+            });
+
+            // Email to recipient
+            await resend.emails.send({
+              from: "LunchBuddy <onboarding@resend.dev>",
+              to: [txData.profiles?.email],
+              subject: "You received a gift! 🎉",
+              html: `
+                <h1>Great news, ${recipientName}!</h1>
+                <p>Someone just bought you a gift from your wishlist!</p>
+                <h2>Gift Details:</h2>
+                <ul>
+                  <li><strong>Item:</strong> ${itemName}</li>
+                  <li><strong>From:</strong> ${txData.buyer_email}</li>
+                </ul>
+                ${txData.buyer_note ? `<p><strong>Their message:</strong> "${txData.buyer_note}"</p>` : ""}
+                <p>Enjoy your gift!</p>
+                <p>Best regards,<br>The LunchBuddy Team</p>
+              `,
+            });
+
+            console.log("Email notifications sent successfully");
+          }
+        } catch (emailError) {
+          console.error("Error sending emails:", emailError);
+          // Don't fail the request if emails fail
         }
 
         return new Response(
