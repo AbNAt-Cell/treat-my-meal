@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { User } from "@supabase/supabase-js";
 import { toast } from "sonner";
-import { UtensilsCrossed, Plus, Share2, LogOut, Settings } from "lucide-react";
+import { UtensilsCrossed, Plus, Share2, LogOut, Settings, History } from "lucide-react";
 import { FoodItemCard } from "@/components/FoodItemCard";
 import { AddFoodItemDialog } from "@/components/AddFoodItemDialog";
 
@@ -171,6 +171,9 @@ const Dashboard = () => {
               </h1>
             </div>
             <div className="flex items-center gap-3">
+              <Button variant="outline" size="icon" onClick={() => navigate("/transactions")}>
+                <History className="h-5 w-5" />
+              </Button>
               <Button variant="outline" size="icon" onClick={() => navigate("/profile")}>
                 <Settings className="h-5 w-5" />
               </Button>

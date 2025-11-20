@@ -9,6 +9,7 @@ import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
 import PublicWishlist from "./pages/PublicWishlist";
 import PaymentSuccess from "./pages/PaymentSuccess";
+import TransactionHistory from "./pages/TransactionHistory";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +27,7 @@ const App = () => (
           <Route path="/profile" element={<Profile />} />
           <Route path="/wishlist/:userId" element={<PublicWishlist />} />
           <Route path="/payment/success" element={<PaymentSuccess />} />
+          <Route path="/transactions" element={<TransactionHistory />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
